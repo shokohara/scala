@@ -1,0 +1,19 @@
+@(message: List[String], title: String)
+
+
+<html>
+<head>
+    <title>@title</title>
+</head>
+<body>
+
+<section>
+    @message.map { value =>
+    <tr>
+        <td>@value</td>
+    </tr>
+    }
+</section>
+
+</body>
+</html>
