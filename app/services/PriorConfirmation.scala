@@ -27,19 +27,7 @@ class PriorConfirmation(db: Database) extends DataBaseManager(db){
     userData <- getUserData(key).toRight("cannot get userData")
     userId <- Certification.checkSign(userData, timestamp, method, request.path, bodyAsString, key, sign)
   } yield UserRequestData(userId, bodyAsJson)
-  def createUserData(implicit request: MessagesRequest[AnyContent]): Either[String, UserData] = {
-    (for{
-      _ <- request.headers.get(CONTENT_TYPE).toRight("header error").flatMap(a => Either.cond(a == JSON, a, "CONTENT_TYPE not json"))
-      body <- request.body.asJson.toRight("body error")
-      name <- (body \ "name").asOpt[String].toRight("name is Empty")
-    } yield {
-      val userId: String = UUID.randomUUID().toString filterNot(_ == '-')
-      val secret: String = (1 to 20).map(_ => userId(Random.nextInt(userId.length))).mkString
-      val key: String = (1 to 10).map(_ => userId(Random.nextInt(secret.length))).mkString
-      val asset = 10000
-      UserData(userId, name, key, secret, asset)
-    })
-  }
+  def createUserData(implicit request: MessagesRequest[AnyContent]): Either[DecodingFailure, UserData] = request.body.asJson.as[UserData]
   def createOrderData(userRequestData: UserRequestData): Either[String, OrderData] = {
     val body = userRequestData.requestBody
     (for{

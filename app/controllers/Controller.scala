@@ -1,10 +1,9 @@
 package controllers
 
 import javax.inject._
+import play.api.db._
 import play.api.mvc._
 import services._
-
-import play.api.db._
 
 @javax.inject.Singleton
 class Controller @Inject()(db: Database, mcc: MessagesControllerComponents) extends MessagesAbstractController(mcc) {
@@ -13,13 +12,8 @@ class Controller @Inject()(db: Database, mcc: MessagesControllerComponents) exte
   def index() = Action { implicit request: MessagesRequest[AnyContent] =>
     Ok("Top Page!")
   }
-  def addUser() = Action { implicit request: MessagesRequest[AnyContent] =>
-    val r = (for {
-      userData <- priorConfirmation.createUserData
-      r <- orderManager.addUser(userData)
-    } yield r).merge
-    println(r)
-    Ok(r)
+  def addUser() = Action(circe.json[UserData]) { implicit request: MessagesRequest[AnyContent] =>
+    orderManager.addUser(request.body).map(r => Ok(r))
   }
   def notFound(hoge: String) = Action { implicit request: MessagesRequest[AnyContent] =>
     NotFound(s"""{"error" : "${request} NotFound!"}""")
