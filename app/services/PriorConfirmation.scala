@@ -3,8 +3,8 @@ package services
 import java.util.UUID
 
 import play.api.db.Database
-import play.api.libs.json.Json
 import play.api.mvc.{AnyContent, MessagesRequest}
+import play.api.libs.json.Json
 
 import scala.util.{Random, Try}
 
@@ -14,17 +14,19 @@ object PriorConfirmation {
 class PriorConfirmation(db: Database) extends DataBaseManager(db){
   import play.api.http.ContentTypes.JSON
   import play.api.http.HeaderNames.CONTENT_TYPE
-  def signatureCheck(implicit request: MessagesRequest[AnyContent]): Either[String, UserRequestData] = (for {
+  // TODO ったで検索して置換
+  def signatureCheck(implicit request: MessagesRequest[AnyContent]): Either[String, UserRequestData] = for {
     _ <- request.headers.get(CONTENT_TYPE).toRight("header error").flatMap(a => Either.cond(a == JSON, a, "CONTENT_TYPE not json"))
     method <- Option(request.method).toRight("method error")
     key <- request.headers.get("AccessKey").toRight("AccessKey error")
     timestamp <- request.headers.get("AccessTimestamp").toRight("AccessTimestamp error")
     sign <- request.headers.get("AccessSign").toRight("AccessSign error")
-    body <- request.body.asJson.toRight("body error")
-    bodyString <- Try(Json.stringify(body)).toEither.left.map(_ => "body not json")
+    bodyAsRaw <- request.body.asRaw.toRight("asRawでNoneだった")
+    bodyAsString <- bodyAsRaw.asBytes().map(_.utf8String).toRight("asBytesでNoneだった")
+    bodyAsJson <- Try(Json.parse(bodyAsString)).toEither.left.map(_ => "Jsonではなかった")
     userData <- getUserData(key).toRight("cannot get userData")
-    userId <- Certification.checkSign(userData, timestamp, method, request.path, bodyString, key, sign)
-  } yield UserRequestData(userId, body))
+    userId <- Certification.checkSign(userData, timestamp, method, request.path, bodyAsString, key, sign)
+  } yield UserRequestData(userId, bodyAsJson)
   def createUserData(implicit request: MessagesRequest[AnyContent]): Either[String, UserData] = {
     (for{
       _ <- request.headers.get(CONTENT_TYPE).toRight("header error").flatMap(a => Either.cond(a == JSON, a, "CONTENT_TYPE not json"))

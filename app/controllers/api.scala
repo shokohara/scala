@@ -3,15 +3,18 @@ package controllers.api
 import javax.inject._
 import play.api.db._
 import play.api.mvc._
-
 import services._
 
 @javax.inject.Singleton
 class Controller @Inject()(db: Database, mcc: MessagesControllerComponents) extends MessagesAbstractController(mcc) {
+  // https://github.com/playframework/play-scala-compile-di-example
+  //  val mydb = new PooledDatabase(null,null)
+  //  PriorConfirmation(mydb)
+  // PooledDatabase
   val priorConfirmation = PriorConfirmation(db)
   val orderManager = OrderManager(db)
   def signTest() = Action { implicit request: MessagesRequest[AnyContent] =>
-    Ok((for(_ <- priorConfirmation.signatureCheck) yield "success").merge)
+    (for (_ <- priorConfirmation.signatureCheck.left.map(BadRequest(_))) yield Ok("success")).merge
   }
   def order() = Action { implicit request: MessagesRequest[AnyContent] =>
     Ok((for {
